@@ -1,0 +1,51 @@
+---
+# Retrieve the running configuration and expose it as `running_config`.
+#
+# Each platform needs its own module, but every caller wants the same variable
+# back. Keeping the platform branching in one file means the playbooks stay
+# vendor-neutral and a new platform is added here once rather than everywhere.
+
+- name: Retrieve running configuration (Cisco IOS-XE)
+  cisco.ios.ios_command:
+    commands:
+      - show running-config
+  register: ios_output
+  when: ansible_network_os == "cisco_ios"
+
+- name: Retrieve running configuration (Cisco NX-OS)
+  cisco.nxos.nxos_command:
+    commands:
+      - show running-config
+  register: nxos_output
+  when: ansible_network_os == "cisco_nxos"
+
+- name: Retrieve running configuration (Juniper Junos)
+  junipernetworks.junos.junos_command:
+    commands:
+      - show configuration
+  register: junos_output
+  when: ansible_network_os == "juniper_junos"
+
+- name: Retrieve running configuration (Arista EOS)
+  arista.eos.eos_command:
+    commands:
+      - show running-config
+  register: eos_output
+  when: ansible_network_os == "arista_eos"
+
+- name: Normalise the platform output into a single variable
+  ansible.builtin.set_fact:
+    running_config: >-
+      {{
+        (ios_output.stdout[0] if ansible_network_os == "cisco_ios" else
+         nxos_output.stdout[0] if ansible_network_os == "cisco_nxos" else
+         junos_output.stdout[0] if ansible_network_os == "juniper_junos" else
+         eos_output.stdout[0] if ansible_network_os == "arista_eos" else "")
+      }}
+
+- name: Fail clearly on an unsupported platform
+  ansible.builtin.fail:
+    msg: >-
+      {{ inventory_hostname }} reports network OS '{{ ansible_network_os }}',
+      which has no fetch implementation in tasks/fetch_config.yml.
+  when: running_config | length == 0

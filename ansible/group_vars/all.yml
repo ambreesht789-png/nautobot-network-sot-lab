@@ -1,0 +1,53 @@
+---
+# Variables shared by every host in the inventory.
+#
+# Credentials are never stored here. They are read from the environment so the
+# same playbooks run unchanged in a developer shell and in CI.
+
+ansible_connection: ansible.netcommon.network_cli
+ansible_user: "{{ lookup('env', 'NETWORK_USERNAME') }}"
+ansible_password: "{{ lookup('env', 'NETWORK_PASSWORD') }}"
+
+# --- Output locations -------------------------------------------------------
+
+backup_dir: "{{ playbook_dir }}/../../backups"
+intended_dir: "{{ playbook_dir }}/../../intended"
+report_dir: "{{ playbook_dir }}/../../reports"
+
+# --- Corporate standards ----------------------------------------------------
+# These are the values the intended configuration is rendered from. Changing a
+# value here changes the intent for every device that inherits it, which is the
+# entire point of holding standards in one place.
+
+corporate:
+  domain_name: "northwind.example"
+  dns_servers:
+    - "10.255.0.201"
+    - "10.255.0.202"
+  ntp_servers:
+    - "10.255.0.211"
+    - "10.255.0.212"
+  syslog_servers:
+    - "10.255.0.221"
+  snmp_location_prefix: "Northwind Logistics"
+  timezone: "UTC"
+
+# --- Compliance -------------------------------------------------------------
+
+# Lines matching these patterns are stripped before comparison. Timestamps,
+# counters and encrypted secrets differ on every read and would otherwise
+# produce permanent false positives.
+compliance_ignore_patterns:
+  - '^Building configuration'
+  - '^Current configuration'
+  - '^! Last configuration change'
+  - '^! NVRAM config last updated'
+  - '^ntp clock-period'
+  - '^\s*!\s*$'
+  - 'secret \S+$'
+  - 'password \d \S+$'
+
+# A device is reported as non-compliant if any intended line is missing from
+# the running configuration. Extra lines on the device are reported separately
+# as informational, because a lab rarely models every local exception.
+compliance_fail_on_extra_lines: False

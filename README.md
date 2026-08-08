@@ -47,6 +47,7 @@ flowchart TD
 | Redis 7 | Cache and Celery broker |
 | Celery worker | Executes background jobs |
 | Golden Config plugin | Backup, intended config generation, compliance |
+| Ansible | Config retrieval, intent rendering, compliance evaluation |
 
 ---
 
@@ -147,6 +148,83 @@ with a management interface and a primary IPv4 address assigned.
 
 ---
 
+## The automation workflow
+
+With the Source of Truth populated, three playbooks close the loop. They are
+deliberately separate: each produces an artefact on disk that the next one
+consumes, so any stage can be inspected, re-run or replaced independently.
+
+```bash
+cd ansible
+ansible-galaxy collection install -r requirements.yml
+
+export NETWORK_USERNAME="<device username>"
+export NETWORK_PASSWORD="<device password>"
+```
+
+### 1. Back up running configurations
+
+```bash
+ansible-playbook playbooks/backup_configs.yml
+```
+
+Reads the device list from Nautobot, retrieves each running configuration and
+writes it to `backups/<device>.cfg`. Platform differences are handled in
+`tasks/fetch_config.yml`, so the playbook itself stays vendor-neutral.
+
+### 2. Render intended configurations
+
+```bash
+ansible-playbook playbooks/generate_intended.yml
+```
+
+Renders `intended/<device>.cfg` from the device's Nautobot attributes plus the
+corporate standards in `group_vars/all.yml`. No device is contacted; this stage
+answers "what should this look like", nothing more.
+
+### 3. Evaluate compliance
+
+```bash
+ansible-playbook playbooks/check_compliance.yml
+```
+
+Compares the two and writes `reports/compliance-<date>.md` — a summary table,
+per-device results, and the exact lines missing from each drifted device. The
+play exits non-zero when anything has drifted, so it drops straight into a
+pipeline as a gate.
+
+Or run the whole sequence:
+
+```bash
+make backup intended compliance
+```
+
+> The lab devices are synthetic, so stages 1 and 3 need reachable hardware or a
+> virtual topology. Stage 2 and the full validation suite run standalone. A
+> Containerlab topology is on the roadmap below.
+
+---
+
+## Testing and CI
+
+```bash
+make validate   # seed integrity and template rendering
+make lint       # yamllint, ruff, ansible-lint
+```
+
+`tests/validate_seed.py` checks that every device references a location, role,
+device type and platform that actually exist, that names follow the
+`<site>-<role>-<number>` convention, and that management addresses are unique
+and fall inside a declared prefix.
+
+`tests/validate_templates.py` renders every template for every device with
+`StrictUndefined`, so an undefined variable fails the test rather than silently
+producing an empty line in a configuration.
+
+Both run in CI on every push, alongside linting and a Docker Compose validation.
+
+---
+
 ## Design notes
 
 A few decisions in this lab are worth calling out, because they are the ones
@@ -165,6 +243,19 @@ editing data, not logic.
 and device types, roles, platforms, prefixes, then devices. Nautobot enforces
 these relationships, so the ordering is not incidental.
 
+**Compliance comparison is line-oriented, not parser-based.** A vendor parser
+gives richer results but must understand every platform's grammar. A normalised
+line diff works across vendors immediately and is transparent enough that an
+engineer can audit any finding by hand. Noise — timestamps, counters, encrypted
+secrets — is stripped through configurable ignore patterns rather than special
+cases in code.
+
+**Missing and extra lines are treated differently.** A line the intent requires
+but the device lacks is a finding. A line the device has but intent does not
+model is informational by default, because no template models every local
+exception on day one. Flipping `compliance_fail_on_extra_lines` tightens this
+once the templates justify it.
+
 **Nautobot 2.x conventions are used throughout.** Roles and Statuses are shared
 `extras` models rather than DCIM-specific ones, IP addresses live inside a
 Namespace, and an address is bound to an interface through the
@@ -178,24 +269,48 @@ against Nautobot 1.x.
 
 ```
 .
-├── docker-compose.yml          # Nautobot, PostgreSQL, Redis, Celery
-├── requirements.txt            # Python dependencies
-├── .env.example                # Environment template — copy to .env
+├── Makefile                        # Convenience targets — run `make help`
+├── docker-compose.yml              # Nautobot, PostgreSQL, Redis, Celery
+├── requirements.txt                # Runtime Python dependencies
+├── requirements-dev.txt            # Linting and CI tooling
+├── .env.example                    # Environment template — copy to .env
 ├── docker/
-│   └── nautobot_config.py      # Nautobot settings and plugin configuration
-└── seed/
-    ├── devices.yml             # Synthetic network inventory
-    └── seed_nautobot.py        # Idempotent loader (pynautobot)
+│   └── nautobot_config.py          # Nautobot settings and plugin configuration
+├── seed/
+│   ├── devices.yml                 # Synthetic network inventory
+│   └── seed_nautobot.py            # Idempotent loader (pynautobot)
+├── ansible/
+│   ├── ansible.cfg
+│   ├── requirements.yml            # Ansible collection dependencies
+│   ├── inventory/
+│   │   └── nautobot.yml            # Dynamic inventory from Nautobot
+│   ├── group_vars/
+│   │   └── all.yml                 # Corporate standards and compliance rules
+│   ├── tasks/
+│   │   └── fetch_config.yml        # Per-platform configuration retrieval
+│   ├── templates/                  # Intended config per platform + report
+│   ├── filter_plugins/
+│   │   └── config_compliance.py    # Comparison logic
+│   └── playbooks/
+│       ├── backup_configs.yml
+│       ├── generate_intended.yml
+│       └── check_compliance.yml
+├── tests/
+│   ├── validate_seed.py            # Inventory integrity checks
+│   └── validate_templates.py       # Renders every template for every device
+└── .github/workflows/ci.yml        # Lint, validate, compose check
 ```
 
 ---
 
 ## Roadmap
 
-- [ ] Ansible playbooks for configuration backup
-- [ ] Jinja2 golden config templates per platform
-- [ ] Compliance rules and drift reporting
+- [x] Ansible playbooks for configuration backup
+- [x] Jinja2 intended-configuration templates per platform
+- [x] Compliance evaluation and Markdown drift reporting
+- [x] Validation suite and CI pipeline
 - [ ] Containerlab topology so the devices are actually reachable
+- [ ] Nautobot Job wrapping the compliance run so it is triggerable from the UI
 
 ---
 
@@ -205,3 +320,7 @@ All device names, serial numbers, IP addresses, locations and the company itself
 are invented for demonstration purposes. This repository contains no
 configuration, data or intellectual property belonging to any employer or
 client.
+
+## Licence
+
+MIT — see [LICENSE](LICENSE).

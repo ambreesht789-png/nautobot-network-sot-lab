@@ -1,0 +1,31 @@
+{#
+  Intended configuration for Juniper Junos devices.
+
+  Junos uses a hierarchical configuration rather than a flat command list, so
+  the rendered output is set-format: it compares cleanly line by line and can
+  be loaded directly with `load set`.
+#}
+# Intended configuration for {{ inventory_hostname }}
+# Platform: {{ device_platform }} | Role: {{ device_role }} | Site: {{ site_name }}
+# Rendered from the Nautobot Source of Truth. Do not edit by hand.
+#
+set system host-name {{ inventory_hostname }}
+set system domain-name {{ corporate.domain_name }}
+{% for server in corporate.dns_servers %}
+set system name-server {{ server }}
+{% endfor %}
+{% for server in corporate.ntp_servers %}
+set system ntp server {{ server }}
+{% endfor %}
+set system time-zone {{ corporate.timezone }}
+{% for server in corporate.syslog_servers %}
+set system syslog host {{ server }} any info
+{% endfor %}
+set system syslog file messages any notice
+set system services ssh protocol-version v2
+set system services ssh connection-limit 10
+delete system services telnet
+set snmp location "{{ corporate.snmp_location_prefix }} - {{ site_name }}"
+set snmp contact "netops@{{ corporate.domain_name }}"
+set interfaces fxp0 description "Out-of-band management"
+set interfaces fxp0 unit 0 family inet address {{ ansible_host }}/24

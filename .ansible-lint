@@ -1,0 +1,15 @@
+---
+profile: production
+
+exclude_paths:
+  - .github/
+  - backups/
+  - intended/
+  - reports/
+
+skip_list:
+  # Templates intentionally live outside a role structure in this lab.
+  - role-name
+
+warn_list:
+  - experimental

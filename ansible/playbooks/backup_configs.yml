@@ -1,0 +1,46 @@
+---
+# Retrieve the running configuration from every active device and write it to
+# disk, one file per device.
+#
+# Usage:
+#   ansible-playbook playbooks/backup_configs.yml
+#   ansible-playbook playbooks/backup_configs.yml --limit cisco_ios
+
+- name: Back up running configurations
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Ensure the backup directory exists
+      ansible.builtin.file:
+        path: "{{ backup_dir }}"
+        state: directory
+        mode: "0750"
+      delegate_to: localhost
+      run_once: true
+
+    - name: Verify the device has a management address
+      ansible.builtin.assert:
+        that:
+          - ansible_host is defined
+          - ansible_host | length > 0
+        fail_msg: >-
+          {{ inventory_hostname }} has no primary IPv4 address in Nautobot.
+          Assign one before running this playbook.
+        quiet: true
+
+    - name: Retrieve the running configuration
+      ansible.builtin.include_tasks: "../tasks/fetch_config.yml"
+
+    - name: Write the configuration to disk
+      ansible.builtin.copy:
+        content: "{{ running_config }}\n"
+        dest: "{{ backup_dir }}/{{ inventory_hostname }}.cfg"
+        mode: "0640"
+      delegate_to: localhost
+
+    - name: Report where the backup was written
+      ansible.builtin.debug:
+        msg: >-
+          {{ inventory_hostname }}: {{ running_config.splitlines() | length }}
+          lines written to backups/{{ inventory_hostname }}.cfg

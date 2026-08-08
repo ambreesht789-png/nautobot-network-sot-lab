@@ -1,0 +1,91 @@
+---
+# Compare each device's running configuration against its intended
+# configuration and produce a drift report.
+#
+# Prerequisites:
+#   ansible-playbook playbooks/backup_configs.yml
+#   ansible-playbook playbooks/generate_intended.yml
+#
+# Usage:
+#   ansible-playbook playbooks/check_compliance.yml
+#
+# The play exits non-zero when any device is non-compliant, so it can be wired
+# straight into a pipeline as a gate.
+
+- name: Evaluate configuration compliance
+  hosts: all
+  gather_facts: false
+  connection: local
+
+  tasks:
+    - name: Ensure the report directory exists
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
+        state: directory
+        mode: "0755"
+      delegate_to: localhost
+      run_once: true
+
+    - name: Read the intended configuration
+      ansible.builtin.slurp:
+        src: "{{ intended_dir }}/{{ inventory_hostname }}.cfg"
+      register: intended_raw
+      delegate_to: localhost
+
+    - name: Read the backed-up running configuration
+      ansible.builtin.slurp:
+        src: "{{ backup_dir }}/{{ inventory_hostname }}.cfg"
+      register: actual_raw
+      delegate_to: localhost
+
+    - name: Evaluate compliance for this device
+      ansible.builtin.set_fact:
+        compliance_result: >-
+          {{
+            (intended_raw.content | b64decode) | config_compliance(
+              actual_raw.content | b64decode,
+              compliance_ignore_patterns,
+              compliance_fail_on_extra_lines
+            )
+          }}
+
+    - name: Show a one-line verdict per device
+      ansible.builtin.debug:
+        msg: >-
+          {{ inventory_hostname }}:
+          {{ 'COMPLIANT' if compliance_result.compliant else 'DRIFT DETECTED' }}
+          ({{ compliance_result.compliance_percentage }}% of intended lines
+          present, {{ compliance_result.missing_lines | length }} missing)
+
+- name: Publish the drift report
+  hosts: localhost
+  gather_facts: true
+  connection: local
+
+  vars:
+    device_results: >-
+      {{
+        dict(
+          groups['all'] | map('extract', hostvars, 'compliance_result')
+          | list | zip(groups['all']) | map('reverse') | list
+        )
+      }}
+
+  tasks:
+    - name: Render the Markdown drift report
+      ansible.builtin.template:
+        src: "../templates/compliance_report.md.j2"
+        dest: "{{ report_dir }}/compliance-{{ ansible_date_time.date }}.md"
+        mode: "0644"
+
+    - name: Summarise the run
+      ansible.builtin.debug:
+        var: device_results | compliance_summary
+
+    - name: Fail the run when any device has drifted
+      ansible.builtin.fail:
+        msg: >-
+          {{ (device_results | compliance_summary).non_compliant_devices }}
+          of {{ (device_results | compliance_summary).total_devices }} devices
+          are non-compliant. See the report in reports/.
+      when: (device_results | compliance_summary).non_compliant_devices | int > 0

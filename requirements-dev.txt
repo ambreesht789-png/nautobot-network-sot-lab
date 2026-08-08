@@ -1,0 +1,7 @@
+# Development and CI tooling. Runtime dependencies are in requirements.txt.
+
+yamllint==1.35.1
+ansible-lint==24.9.2
+ruff==0.6.9
+pre-commit==3.8.0
+jinja2==3.1.4

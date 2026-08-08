@@ -1,0 +1,36 @@
+---
+# Dynamic inventory sourced directly from Nautobot.
+#
+# The Source of Truth is the inventory. There is no static host file to drift
+# out of sync: adding a device in Nautobot makes it appear here on the next run.
+#
+# Required environment variables:
+#   NAUTOBOT_URL    e.g. http://localhost:8080
+#   NAUTOBOT_TOKEN  an API token with read access
+
+plugin: networktocode.nautobot.inventory
+
+api_endpoint: "{{ lookup('env', 'NAUTOBOT_URL') }}"
+token: "{{ lookup('env', 'NAUTOBOT_TOKEN') }}"
+validate_certs: True
+
+# Only pull devices that are in service.
+query_filters:
+  - status: active
+
+# Build groups automatically from Source of Truth attributes, so playbooks can
+# target "all Juniper devices" or "everything in Rotterdam" without maintaining
+# any group membership by hand.
+group_by:
+  - platform
+  - device_roles
+  - location
+
+# Expose the attributes the templates and compliance rules need.
+config_context: False
+compose:
+  ansible_network_os: platform.network_driver
+  ansible_host: primary_ip4.host
+  device_role: role.name
+  site_name: location.name
+  device_platform: platform.name

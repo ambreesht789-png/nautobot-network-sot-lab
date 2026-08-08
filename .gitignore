@@ -2,6 +2,7 @@
 .env
 *.pem
 *.key
+*.retry
 
 # Python
 __pycache__/
@@ -9,12 +10,20 @@ __pycache__/
 .venv/
 venv/
 *.egg-info/
+.ruff_cache/
 
 # Ansible
-*.retry
 ansible/collections/
 ansible/artifacts/
+ansible/*.log
 
-# Local output
+# Generated output
 backups/
+intended/
 reports/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

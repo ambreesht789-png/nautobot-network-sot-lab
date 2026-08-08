@@ -1,0 +1,42 @@
+{#
+  Intended configuration for Cisco NX-OS devices.
+
+  NX-OS differs enough from IOS-XE in command syntax that a shared template
+  would be more conditional than content, so it gets its own file.
+#}
+! Intended configuration for {{ inventory_hostname }}
+! Platform: {{ device_platform }} | Role: {{ device_role }} | Site: {{ site_name }}
+! Rendered from the Nautobot Source of Truth. Do not edit by hand.
+!
+hostname {{ inventory_hostname }}
+!
+ip domain-name {{ corporate.domain_name }}
+{% for server in corporate.dns_servers %}
+ip name-server {{ server }}
+{% endfor %}
+!
+{% for server in corporate.ntp_servers %}
+ntp server {{ server }} use-vrf management
+{% endfor %}
+clock timezone {{ corporate.timezone }} 0 0
+!
+{% for server in corporate.syslog_servers %}
+logging server {{ server }} 6 use-vrf management
+{% endfor %}
+logging logfile messages 6
+logging timestamp milliseconds
+!
+snmp-server location {{ corporate.snmp_location_prefix }} - {{ site_name }}
+snmp-server contact netops@{{ corporate.domain_name }}
+!
+feature ssh
+no feature telnet
+line vty
+ exec-timeout 10
+!
+interface mgmt0
+ description Out-of-band management
+ vrf member management
+ ip address {{ ansible_host }}/24
+ no shutdown
+!

@@ -1,0 +1,37 @@
+{#
+  Intended configuration for Arista EOS devices.
+#}
+! Intended configuration for {{ inventory_hostname }}
+! Platform: {{ device_platform }} | Role: {{ device_role }} | Site: {{ site_name }}
+! Rendered from the Nautobot Source of Truth. Do not edit by hand.
+!
+hostname {{ inventory_hostname }}
+ip domain-name {{ corporate.domain_name }}
+!
+{% for server in corporate.dns_servers %}
+ip name-server vrf default {{ server }}
+{% endfor %}
+!
+{% for server in corporate.ntp_servers %}
+ntp server vrf management {{ server }}
+{% endfor %}
+clock timezone {{ corporate.timezone }}
+!
+{% for server in corporate.syslog_servers %}
+logging vrf management host {{ server }}
+{% endfor %}
+logging buffered 32768 informational
+!
+snmp-server location {{ corporate.snmp_location_prefix }} - {{ site_name }}
+snmp-server contact netops@{{ corporate.domain_name }}
+!
+management ssh
+   idle-timeout 10
+!
+no management telnet
+!
+interface Management1
+   description Out-of-band management
+   vrf management
+   ip address {{ ansible_host }}/24
+!

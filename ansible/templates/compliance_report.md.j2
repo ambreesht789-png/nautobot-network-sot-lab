@@ -1,0 +1,84 @@
+{% set summary = device_results | compliance_summary %}
+# Configuration Compliance Report
+
+**Generated:** {{ ansible_date_time.iso8601 }}
+**Source of Truth:** {{ lookup('env', 'NAUTOBOT_URL') }}
+
+---
+
+## Summary
+
+| Metric | Value |
+|---|---|
+| Devices evaluated | {{ summary.total_devices }} |
+| Compliant | {{ summary.compliant_devices }} |
+| Non-compliant | {{ summary.non_compliant_devices }} |
+| Compliance rate | {{ summary.compliance_rate }}% |
+| Total missing lines | {{ summary.total_missing_lines }} |
+
+{% if summary.non_compliant_devices == 0 %}
+All devices match their intended configuration.
+{% else %}
+{{ summary.non_compliant_devices }} device(s) have drifted from intent. Details below.
+{% endif %}
+
+---
+
+## Per-device results
+
+| Device | Platform | Site | Status | Intended lines | Present | Compliance |
+|---|---|---|---|---|---|---|
+{% for host in groups['all'] | sort %}
+{% set result = hostvars[host].compliance_result %}
+| `{{ host }}` | {{ hostvars[host].device_platform }} | {{ hostvars[host].site_name }} | {{ 'Pass' if result.compliant else 'Fail' }} | {{ result.intended_line_count }} | {{ result.matched_line_count }} | {{ result.compliance_percentage }}% |
+{% endfor %}
+
+---
+
+## Drift detail
+
+{% for host in groups['all'] | sort %}
+{% set result = hostvars[host].compliance_result %}
+{% if not result.compliant %}
+### {{ host }}
+
+{{ hostvars[host].device_platform }} at {{ hostvars[host].site_name }}, role {{ hostvars[host].device_role }}.
+
+**Missing from the running configuration ({{ result.missing_lines | length }} lines):**
+
+```
+{% for line in result.missing_lines %}
+{{ line }}
+{% endfor %}
+```
+
+{% if result.extra_lines | length > 0 %}
+**Present on the device but not in intent ({{ result.extra_lines | length }} lines):**
+
+```
+{% for line in result.extra_lines[:20] %}
+{{ line }}
+{% endfor %}
+{% if result.extra_lines | length > 20 %}
+... {{ result.extra_lines | length - 20 }} further lines omitted
+{% endif %}
+```
+{% endif %}
+
+{% endif %}
+{% endfor %}
+{% if summary.non_compliant_devices == 0 %}
+No drift to report.
+{% endif %}
+
+---
+
+## How to read this report
+
+Missing lines are configuration the Source of Truth says should be present but
+which the device does not have. These are the actionable findings.
+
+Extra lines are configuration present on the device but absent from intent.
+They are informational by default, because a template rarely models every local
+exception. Set `compliance_fail_on_extra_lines: true` in `group_vars/all.yml`
+to treat them as failures once the templates are complete enough to justify it.

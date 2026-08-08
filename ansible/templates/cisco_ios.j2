@@ -1,0 +1,46 @@
+{#
+  Intended configuration for Cisco IOS-XE devices.
+
+  Every value comes either from Nautobot (device attributes) or from the
+  corporate standards in group_vars/all.yml. Nothing is hard-coded per device.
+#}
+! Intended configuration for {{ inventory_hostname }}
+! Platform: {{ device_platform }} | Role: {{ device_role }} | Site: {{ site_name }}
+! Rendered from the Nautobot Source of Truth. Do not edit by hand.
+!
+hostname {{ inventory_hostname }}
+!
+ip domain name {{ corporate.domain_name }}
+{% for server in corporate.dns_servers %}
+ip name-server {{ server }}
+{% endfor %}
+!
+{% for server in corporate.ntp_servers %}
+ntp server {{ server }}
+{% endfor %}
+clock timezone {{ corporate.timezone }} 0
+!
+{% for server in corporate.syslog_servers %}
+logging host {{ server }}
+{% endfor %}
+logging buffered 32768 informational
+service timestamps log datetime msec localtime show-timezone
+!
+snmp-server location {{ corporate.snmp_location_prefix }} - {{ site_name }}
+snmp-server contact netops@{{ corporate.domain_name }}
+!
+ip ssh version 2
+line vty 0 15
+ transport input ssh
+ exec-timeout 10 0
+!
+service password-encryption
+no ip http server
+no ip http secure-server
+!
+interface Management1
+ description Out-of-band management
+ ip address {{ ansible_host }} 255.255.255.0
+ no shutdown
+!
+end
