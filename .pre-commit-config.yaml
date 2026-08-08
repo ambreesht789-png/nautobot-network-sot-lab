@@ -21,7 +21,7 @@ repos:
         args: [-c, .yamllint]
 
   - repo: https://github.com/ansible/ansible-lint
-    rev: v24.9.2
+    rev: v26.6.0
     hooks:
       - id: ansible-lint
         files: ^ansible/

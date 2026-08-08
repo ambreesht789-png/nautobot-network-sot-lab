@@ -288,13 +288,13 @@ against Nautobot 1.x.
 │   │   └── all.yml                 # Corporate standards and compliance rules
 │   ├── tasks/
 │   │   └── fetch_config.yml        # Per-platform configuration retrieval
-│   ├── templates/                  # Intended config per platform + report
 │   ├── filter_plugins/
 │   │   └── config_compliance.py    # Comparison logic
 │   └── playbooks/
 │       ├── backup_configs.yml
 │       ├── generate_intended.yml
-│       └── check_compliance.yml
+│       ├── check_compliance.yml
+│       └── templates/              # Intended config per platform + report
 ├── tests/
 │   ├── validate_seed.py            # Inventory integrity checks
 │   └── validate_templates.py       # Renders every template for every device

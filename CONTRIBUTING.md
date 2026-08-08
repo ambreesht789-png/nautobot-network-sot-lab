@@ -42,7 +42,7 @@ outside a declared prefix.
 Four things have to line up:
 
 1. A `platforms` entry in `seed/devices.yml` with the correct `network_driver`
-2. A template at `ansible/templates/<network_driver>.j2`
+2. A template at `ansible/playbooks/templates/<network_driver>.j2`
 3. A fetch task branch in `ansible/tasks/fetch_config.yml`
 4. A mapping in `DRIVER_BY_PLATFORM` in `tests/validate_templates.py`
 

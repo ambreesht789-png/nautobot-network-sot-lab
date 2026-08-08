@@ -12,7 +12,7 @@ plugin: networktocode.nautobot.inventory
 
 api_endpoint: "{{ lookup('env', 'NAUTOBOT_URL') }}"
 token: "{{ lookup('env', 'NAUTOBOT_TOKEN') }}"
-validate_certs: True
+validate_certs: true
 
 # Only pull devices that are in service.
 query_filters:
@@ -27,7 +27,7 @@ group_by:
   - location
 
 # Expose the attributes the templates and compliance rules need.
-config_context: False
+config_context: false
 compose:
   ansible_network_os: platform.network_driver
   ansible_host: primary_ip4.host

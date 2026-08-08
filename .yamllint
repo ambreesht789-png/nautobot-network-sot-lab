@@ -6,7 +6,7 @@ rules:
     max: 120
     level: warning
   truthy:
-    allowed-values: ["true", "false", "True", "False"]
+    allowed-values: ["true", "false"]
   comments:
     min-spaces-from-content: 1
   braces:

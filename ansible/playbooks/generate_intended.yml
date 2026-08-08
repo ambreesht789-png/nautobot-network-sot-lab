@@ -25,7 +25,7 @@
 
     - name: Confirm a template exists for this platform
       ansible.builtin.stat:
-        path: "{{ playbook_dir }}/../templates/{{ ansible_network_os }}.j2"
+        path: "{{ playbook_dir }}/templates/{{ ansible_network_os }}.j2"
       register: template_stat
       delegate_to: localhost
 
@@ -33,12 +33,12 @@
       ansible.builtin.fail:
         msg: >-
           No template found for platform '{{ ansible_network_os }}'.
-          Expected templates/{{ ansible_network_os }}.j2
+          Expected playbooks/templates/{{ ansible_network_os }}.j2
       when: not template_stat.stat.exists
 
     - name: Render the intended configuration
       ansible.builtin.template:
-        src: "../templates/{{ ansible_network_os }}.j2"
+        src: "{{ ansible_network_os }}.j2"
         dest: "{{ intended_dir }}/{{ inventory_hostname }}.cfg"
         mode: "0644"
         lstrip_blocks: true

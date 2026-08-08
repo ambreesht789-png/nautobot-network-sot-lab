@@ -50,4 +50,4 @@ compliance_ignore_patterns:
 # A device is reported as non-compliant if any intended line is missing from
 # the running configuration. Extra lines on the device are reported separately
 # as informational, because a lab rarely models every local exception.
-compliance_fail_on_extra_lines: False
+compliance_fail_on_extra_lines: false

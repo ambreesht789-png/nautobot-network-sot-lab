@@ -74,7 +74,7 @@
   tasks:
     - name: Render the Markdown drift report
       ansible.builtin.template:
-        src: "../templates/compliance_report.md.j2"
+        src: "compliance_report.md.j2"
         dest: "{{ report_dir }}/compliance-{{ ansible_date_time.date }}.md"
         mode: "0644"
 

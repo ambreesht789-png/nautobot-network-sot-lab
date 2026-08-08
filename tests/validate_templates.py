@@ -19,7 +19,7 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined, TemplateError
 
 ROOT = Path(__file__).parent.parent
 SEED_FILE = ROOT / "seed" / "devices.yml"
-TEMPLATE_DIR = ROOT / "ansible" / "templates"
+TEMPLATE_DIR = ROOT / "ansible" / "playbooks" / "templates"
 GROUP_VARS = ROOT / "ansible" / "group_vars" / "all.yml"
 
 # Maps the platform names in the seed data to the network_driver value that
