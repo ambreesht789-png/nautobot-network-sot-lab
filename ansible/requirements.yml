@@ -16,7 +16,7 @@ collections:
     version: ">=8.0.0"
   - name: cisco.nxos
     version: ">=6.0.0"
-  - name: junipernetworks.junos
+  - name: juniper.device
     version: ">=8.0.0"
   - name: arista.eos
     version: ">=9.0.0"
