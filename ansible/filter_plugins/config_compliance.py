@@ -17,7 +17,9 @@ import re
 from typing import Any
 
 
-def normalize_config(config: str, ignore_patterns: list[str] | None = None) -> list[str]:
+def normalize_config(
+    config: str, ignore_patterns: list[str] | None = None
+) -> list[str]:
     """Reduce a configuration blob to a comparable list of lines.
 
     Trailing whitespace, blank lines, comment-only lines and anything matching

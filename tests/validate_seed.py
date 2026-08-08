@@ -79,8 +79,7 @@ def check_references(data: dict) -> None:
             value = device.get(field)
             if value not in valid_values:
                 raise ValidationError(
-                    f"Device '{device['name']}' references unknown {field} "
-                    f"'{value}'"
+                    f"Device '{device['name']}' references unknown {field} '{value}'"
                 )
 
 

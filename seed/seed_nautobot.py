@@ -267,8 +267,11 @@ def main() -> None:
     seed_devices(client, data, locations, device_types, roles, platforms)
 
     total = len(data["devices"])
-    logger.info("Seeding complete: %d devices across %d locations.",
-                total, len(data["locations"]))
+    logger.info(
+        "Seeding complete: %d devices across %d locations.",
+        total,
+        len(data["locations"]),
+    )
 
 
 if __name__ == "__main__":

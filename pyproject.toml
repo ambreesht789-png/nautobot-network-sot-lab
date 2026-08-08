@@ -1,0 +1,20 @@
+﻿[tool.ruff]
+line-length = 88
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "RUF"]
+ignore = [
+    # Shebangs are intentional: the scripts are run directly on Linux and via
+    # `python <script>` on Windows, so the executable bit is not relied upon.
+    "EXE001",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Nautobot's settings module is imported by star by design; the names it brings
+# in are Django settings consumed by the framework, not by this file.
+"docker/nautobot_config.py" = ["F403", "F405"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
