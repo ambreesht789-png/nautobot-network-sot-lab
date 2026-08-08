@@ -1,0 +1,75 @@
+---
+# Nautobot Network Source of Truth Lab
+# A self-contained demonstration stack: Nautobot, PostgreSQL, Redis and a
+# background worker. Intended for local evaluation and demonstration only.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sot-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: sot-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  nautobot:
+    image: networktocode/nautobot:2.2-py3.11
+    container_name: sot-nautobot
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    volumes:
+      - ./docker/nautobot_config.py:/opt/nautobot/nautobot_config.py:ro
+      - static_files:/opt/nautobot/static
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+    restart: unless-stopped
+
+  celery_worker:
+    image: networktocode/nautobot:2.2-py3.11
+    container_name: sot-celery-worker
+    command: nautobot-server celery worker --loglevel INFO
+    depends_on:
+      nautobot:
+        condition: service_healthy
+    env_file:
+      - .env
+    volumes:
+      - ./docker/nautobot_config.py:/opt/nautobot/nautobot_config.py:ro
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  static_files:

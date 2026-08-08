@@ -1,0 +1,20 @@
+# Environment and secrets
+.env
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Ansible
+*.retry
+ansible/collections/
+ansible/artifacts/
+
+# Local output
+backups/
+reports/
