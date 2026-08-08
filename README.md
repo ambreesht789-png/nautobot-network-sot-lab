@@ -1,5 +1,7 @@
 # Nautobot Network Source of Truth Lab
 
+[![CI](https://github.com/ambreesht789-png/nautobot-network-sot-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/ambreesht789-png/nautobot-network-sot-lab/actions/workflows/ci.yml)
+
 A self-contained, reproducible lab that demonstrates how to stand up
 [Nautobot](https://nautobot.com) as a network Source of Truth (SoT), populate it
 programmatically, and drive configuration compliance from it.
